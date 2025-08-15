@@ -20,7 +20,7 @@ const Navbar = () => {
             to="/"
             className="text-2xl font-bold tracking-wide hover:opacity-90 transition-opacity duration-200"
           >
-            Your App Name
+            Build and Track Your Donation Cause
           </Link>
 
           {/* Navigation Links */}
