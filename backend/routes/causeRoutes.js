@@ -1,28 +1,31 @@
 const express = require('express');
+const router = express.Router();
 const { protect } = require('../middleware/authMiddleware');
 const {
   createCause,
   getCauses,
+  getCauseById,
   updateCause,
   deleteCause,
   donateToCause
 } = require('../controllers/causeController');
 
-const router = express.Router();
-
-// Create new cause
-router.post('/', protect, createCause);
-
 // Get all causes
-router.get('/', getCauses);
+router.get('/causes', getCauses);
 
-// Update cause
-router.put('/:id', protect, updateCause);
+// Get a single cause by ID
+router.get('/causes/:id', getCauseById);
 
-// Delete cause
-router.delete('/:id', protect, deleteCause);
+// Create a new cause (protected)
+router.post('/causes', protect, createCause);
 
-// Donate to cause
-router.post('/:id/donate', donateToCause);
+// Update a cause by ID (protected)
+router.put('/causes/:id', protect, updateCause);
+
+// Delete a cause by ID (protected)
+router.delete('/causes/:id', protect, deleteCause);
+
+// Donate to a cause
+router.post('/causes/:id/donate', donateToCause);
 
 module.exports = router;
