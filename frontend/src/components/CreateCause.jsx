@@ -289,6 +289,7 @@ const CreateCause = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+
       await axiosInstance.post('/api/causes', {
         title,
         description,
@@ -300,12 +301,28 @@ const CreateCause = () => {
       setDescription('');
       setGoalAmount('');
       navigate('/causes');
+
+      const token = localStorage.getItem('token');
+      const res = await axiosInstance.post(
+        '/api/causes',
+        { title, description, goalAmount: Number(goalAmount) },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (onCauseCreated) {
+        onCauseCreated(res.data); // update parent state if needed
+      }
+
+      // Redirect to causes page
+      navigate('/causes', { state: { newCause: res.data } });
+
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to create cause');
     }
   };
 
   return (
+
     <div style={styles.container}>
       {/* Heading on top */}
       <div style={styles.header}>
@@ -343,11 +360,44 @@ const CreateCause = () => {
           <button type="submit" style={styles.button}>Add Cause</button>
         </form>
       </div>
+
+    <div style={styles.card}>
+      <h2 style={styles.title}>Create Cause</h2>
+      <form onSubmit={handleSubmit} style={styles.form}>
+        <input
+          type="text"
+          placeholder="Cause Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+          style={styles.input}
+        />
+        <textarea
+          placeholder="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+          style={{ ...styles.input, height: '100px', resize: 'none' }}
+        />
+        <input
+          type="number"
+          placeholder="Goal Amount"
+          value={goalAmount}
+          onChange={(e) => setGoalAmount(e.target.value)}
+          required
+          style={styles.input}
+        />
+        <button type="submit" style={styles.button}>Add Cause</button>
+      </form>
+
     </div>
   );
 };
 
+export default CreateCause;
+
 const styles = {
+
   container: {
     display: 'flex',
     flexDirection: 'column',
@@ -371,20 +421,32 @@ const styles = {
     fontSize: '18px',
     color: '#555',
   },
+
   card: {
     background: '#ffffff',
-    padding: '40px',
+    padding: '30px',
     borderRadius: '15px',
     boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+
     width: '100%',
     maxWidth: '450px',
+
+
   },
   cardTitle: {
     textAlign: 'center',
     marginBottom: '25px',
+
     fontSize: '28px',
     color: '#1a73e8',
     fontWeight: 'bold',
+
+    color: '#1a73e8',
+    fontSize: '28px',      // bigger font
+    fontWeight: '700',     // bold
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", // modern font
+    textShadow: '1px 1px 2px rgba(0,0,0,0.1)', // subtle shadow
+
   },
   form: {
     display: 'flex',
@@ -397,7 +459,6 @@ const styles = {
     border: '1px solid #ccc',
     fontSize: '16px',
     outline: 'none',
-    transition: '0.3s',
   },
   button: {
     padding: '12px',
@@ -407,8 +468,8 @@ const styles = {
     color: '#fff',
     fontSize: '16px',
     cursor: 'pointer',
+
     transition: '0.3s',
+
   },
 };
-
-export default CreateCause;
