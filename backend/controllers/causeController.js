@@ -1,4 +1,4 @@
-const Cause = require('../models/causeModel');
+const Cause = require('../models/Cause');
 
 // Create a new cause
 const createCause = async (req, res) => {

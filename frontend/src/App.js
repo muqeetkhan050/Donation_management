@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import CreateCause from './components/CreateCause';
+import CauseListPage from './pages/CauseListPage';
 function App() {
   return (
     <Router>
@@ -14,8 +15,10 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/tasks" element={<Tasks />} />
-        <Route path="/CreateCause" element={<CreateCause />} />
+        <Route path="/create-cause" element={<CreateCause />} />
+        <Route path="/causes" element={<CauseListPage />} />
       </Routes>
+
     </Router>
   );
 }
