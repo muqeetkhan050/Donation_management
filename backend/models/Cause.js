@@ -1,9 +1,15 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const causeSchema=new mongoose.Schema({
-    title:{type:String,required:true},
-    description:{type:String,required:true},    
-    totalDonations:{type:Number,default:0},
-},{timestamps:true})
+const donationSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    description: { type: String },
+    amount: { type: Number, required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  },
+  { timestamps: true }
+);
 
-export default mongoose.model('Cause',causeSchema);
+module.exports = mongoose.model('Donation', donationSchema);
+
+
