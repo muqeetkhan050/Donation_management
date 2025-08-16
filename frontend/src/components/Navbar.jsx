@@ -1,3 +1,5 @@
+
+
 import { Link } from 'react-router-dom';
 
 const Navbar = () => {
@@ -7,7 +9,7 @@ const Navbar = () => {
       <div style={styles.links}>
         <Link to="/login" style={styles.link}>Login</Link>
         <Link to="/register" style={styles.link}>Register</Link>
-        <Link to="/profile" style={styles.link}>Profile</Link>
+       <Link to="/my-cause" style={styles.link}>My Causes</Link>{/* Changed here */}
         <Link to="/create-cause" style={styles.link}>Create Cause</Link>
         <Link to="/causes" style={styles.link}>View Causes</Link>
       </div>

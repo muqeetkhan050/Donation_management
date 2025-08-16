@@ -16,6 +16,8 @@ app.use(express.json());
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/causes', require('./routes/causeRoutes')); // Causes routes
+app.use('/uploads', express.static('uploads'));
+
 
 
 
