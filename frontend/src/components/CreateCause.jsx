@@ -1,43 +1,121 @@
+
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 
 const CreateCause = ({ onCauseCreated }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [goalAmount, setGoalAmount] = useState('');
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    targetAmount: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // Detailed debugging
+    console.log('=== CREATE CAUSE DEBUG ===');
+    console.log('Form data:', formData);
+    console.log('Token check:', localStorage.getItem('userToken'));
+    console.log('User info:', localStorage.getItem('userInfo'));
+    console.log('All localStorage:', Object.keys(localStorage));
+
     try {
-      const token = localStorage.getItem('token');
-      const res = await axiosInstance.post(
-        '/api/causes',
-        { title, description, goalAmount: Number(goalAmount) },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const payload = {
+        ...formData,
+        targetAmount: Number(formData.targetAmount)
+      };
+      
+      console.log('Sending payload:', payload);
 
-      alert('Cause created successfully');
+      const response = await axiosInstance.post('/api/causes', payload);
 
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setGoalAmount('');
-
-      // Update parent state if passed
-      if (onCauseCreated) onCauseCreated(res.data);
-
+      console.log('Success response:', response.data);
+      alert('✅ Cause created successfully!');
+      if (onCauseCreated) onCauseCreated(response.data);
+      navigate('/causes');
+      
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to create cause');
+      console.log('=== DETAILED ERROR INFO ===');
+      console.log('Error object:', err);
+      console.log('Error name:', err.name);
+      console.log('Error message:', err.message);
+      console.log('Error code:', err.code);
+      console.log('Error status:', err.response?.status);
+      console.log('Error response data:', err.response?.data);
+      console.log('Error response headers:', err.response?.headers);
+      console.log('Error config:', err.config);
+      console.log('Request headers:', err.config?.headers);
+      
+      // Set user-friendly error message
+      let errorMessage = 'Something went wrong. Please try again.';
+      
+      if (err.response) {
+        // Server responded with error status
+        errorMessage = err.response.data?.message || `Server error: ${err.response.status}`;
+      } else if (err.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your connection.';
+      } else {
+        // Something else happened
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div style={styles.container}>
+      {/* Debug Panel - Remove this in production */}
+      <div style={{
+        backgroundColor: '#f0f0f0',
+        padding: '10px',
+        margin: '10px',
+        borderRadius: '5px',
+        fontSize: '12px',
+        fontFamily: 'monospace'
+      }}>
+        <strong>Debug Info:</strong><br/>
+        Token: {localStorage.getItem('userToken') ? '✅ Present' : '❌ Missing'}<br/>
+        Form Valid: {formData.title && formData.description && formData.targetAmount ? '✅ Yes' : '❌ No'}
+      </div>
+
       {/* Heading */}
       <div style={styles.header}>
         <h1 style={styles.mainTitle}>Create and Manage Donations</h1>
         <p style={styles.subtitle}>Easily add new causes and track donations to make a positive impact.</p>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div style={{
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          padding: '15px',
+          borderRadius: '4px',
+          margin: '0 auto 20px',
+          maxWidth: '450px',
+          border: '1px solid #ef9a9a'
+        }}>
+          {error}
+        </div>
+      )}
 
       {/* Form Card */}
       <div style={styles.card}>
@@ -45,35 +123,72 @@ const CreateCause = ({ onCauseCreated }) => {
         <form onSubmit={handleSubmit} style={styles.form}>
           <input
             type="text"
+            name="title"
             placeholder="Cause Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            value={formData.title}
+            onChange={handleChange}
             required
-            style={styles.input}
+            disabled={loading}
+            style={{
+              ...styles.input,
+              backgroundColor: loading ? '#f5f5f5' : 'white'
+            }}
           />
           <textarea
+            name="description"
             placeholder="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            value={formData.description}
+            onChange={handleChange}
             required
-            style={{ ...styles.input, height: '100px', resize: 'none' }}
+            disabled={loading}
+            style={{ 
+              ...styles.input, 
+              height: '100px', 
+              resize: 'none',
+              backgroundColor: loading ? '#f5f5f5' : 'white'
+            }}
           />
           <input
             type="number"
-            placeholder="Goal Amount"
-            value={goalAmount}
-            onChange={(e) => setGoalAmount(e.target.value)}
+            name="targetAmount"
+            placeholder="Target Amount ($)"
+            value={formData.targetAmount}
+            onChange={handleChange}
             required
-            style={styles.input}
+            min="1"
+            disabled={loading}
+            style={{
+              ...styles.input,
+              backgroundColor: loading ? '#f5f5f5' : 'white'
+            }}
           />
-          <button type="submit" style={styles.button}>Add Cause</button>
+          <button 
+            type="submit" 
+            disabled={loading}
+            style={{
+              ...styles.button,
+              backgroundColor: loading ? '#ccc' : '#1a73e8',
+              cursor: loading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {loading ? '⏳ Creating...' : '✚ Add Cause'}
+          </button>
         </form>
+
+        {/* Navigation back to causes */}
+        <div style={styles.navigation}>
+          <button 
+            onClick={() => navigate('/causes')}
+            style={styles.backButton}
+            disabled={loading}
+          >
+            ← View All Causes
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-
-export default CreateCause;
 
 const styles = {
   container: {
@@ -112,9 +227,7 @@ const styles = {
     marginBottom: '25px',
     fontSize: '28px',
     fontWeight: '700',
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     color: '#1a73e8',
-    textShadow: '1px 1px 2px rgba(0,0,0,0.1)',
   },
   form: {
     display: 'flex',
@@ -127,6 +240,7 @@ const styles = {
     border: '1px solid #ccc',
     fontSize: '16px',
     outline: 'none',
+    transition: 'border-color 0.3s ease',
   },
   button: {
     padding: '12px',
@@ -136,6 +250,22 @@ const styles = {
     color: '#fff',
     fontSize: '16px',
     cursor: 'pointer',
-    transition: '0.3s',
+    fontWeight: 'bold',
   },
+  navigation: {
+    marginTop: '20px',
+    textAlign: 'center',
+  },
+  backButton: {
+    padding: '10px 20px',
+    backgroundColor: '#6c757d',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 'bold',
+  }
 };
+
+export default CreateCause;
