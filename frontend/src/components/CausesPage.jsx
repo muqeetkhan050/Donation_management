@@ -1,7 +1,6 @@
 
 
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../axiosConfig';
 
@@ -16,14 +15,11 @@ const CausesPage = () => {
   });
   const [error, setError] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [donationAmounts, setDonationAmounts] = useState({});
   
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchCauses();
-  }, [refreshTrigger]);
-
-  const fetchCauses = async () => {
+  const fetchCauses = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
@@ -38,7 +34,11 @@ const CausesPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchCauses();
+  }, [refreshTrigger, fetchCauses]);
 
   const handleRefresh = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -99,25 +99,35 @@ const CausesPage = () => {
     }
   };
 
+  const handleDonate = async (causeId) => {
+    const amount = Number(donationAmounts[causeId]);
+    if (!amount || amount <= 0) {
+      alert('❌ Please enter a valid amount');
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post(`/api/causes/${causeId}/donate`, { amount });
+      setCauses(causes.map(c => c._id === causeId ? response.data : c));
+      setDonationAmounts(prev => ({ ...prev, [causeId]: '' }));
+      alert(`✅ Thank you for donating $${amount}!`);
+    } catch (err) {
+      console.error('Donation failed:', err);
+      alert(err.response?.data?.message || 'Donation failed');
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ 
-        textAlign: 'center', 
-        padding: '100px 20px',
-        fontSize: '18px',
-        color: '#666'
-      }}>
+      <div style={{ textAlign: 'center', padding: '100px 20px', fontSize: '18px', color: '#666' }}>
         <div style={{ marginBottom: '20px' }}>🔄 Loading causes...</div>
-        <div style={{ fontSize: '14px', color: '#999' }}>
-          Please wait while we fetch the latest data
-        </div>
+        <div style={{ fontSize: '14px', color: '#999' }}>Please wait while we fetch the latest data</div>
       </div>
     );
   }
 
   return (
     <div style={{ padding: '20px', maxWidth: '900px', margin: '0 auto' }}>
-      {/* Error Message */}
       {error && (
         <div style={{
           backgroundColor: '#ffebee',
@@ -126,12 +136,9 @@ const CausesPage = () => {
           borderRadius: '4px',
           marginBottom: '20px',
           border: '1px solid #ef9a9a'
-        }}>
-          {error}
-        </div>
+        }}>{error}</div>
       )}
 
-      {/* Header Section */}
       <div style={{ textAlign: 'center', marginBottom: '30px' }}>
         <h1 style={{ color: '#1a73e8', marginBottom: '10px', fontSize: '32px' }}>
           🎯 Donation Causes ({causes.length})
@@ -140,7 +147,6 @@ const CausesPage = () => {
           Manage your causes, track donations, and make an impact
         </p>
         
-        {/* Action Buttons */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', flexWrap: 'wrap' }}>
           <button
             onClick={() => navigate('/create-cause')}
@@ -153,7 +159,6 @@ const CausesPage = () => {
               fontWeight: 'bold',
               fontSize: '16px',
               cursor: 'pointer',
-              transition: 'all 0.3s ease',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           >
@@ -171,7 +176,6 @@ const CausesPage = () => {
               fontWeight: 'bold',
               fontSize: '16px',
               cursor: 'pointer',
-              transition: 'all 0.3s ease',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
           >
@@ -180,15 +184,8 @@ const CausesPage = () => {
         </div>
       </div>
 
-      {/* Content Section */}
       {causes.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          padding: '80px 20px',
-          backgroundColor: '#f8f9fa',
-          borderRadius: '15px',
-          border: '2px dashed #dee2e6'
-        }}>
+        <div style={{ textAlign: 'center', padding: '80px 20px', backgroundColor: '#f8f9fa', borderRadius: '15px', border: '2px dashed #dee2e6' }}>
           <div style={{ fontSize: '48px', marginBottom: '20px' }}>📋</div>
           <p style={{ fontSize: '24px', color: '#666', marginBottom: '10px', fontWeight: 'bold' }}>
             No causes found yet
@@ -216,19 +213,14 @@ const CausesPage = () => {
       ) : (
         <div style={{ display: 'grid', gap: '25px' }}>
           {causes.map((cause, index) => (
-            <div 
-              key={cause._id} 
-              style={{
-                border: '2px solid #e3f2fd',
-                borderRadius: '15px',
-                padding: '25px',
-                backgroundColor: '#fff',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                transition: 'all 0.3s ease',
-                position: 'relative'
-              }}
-            >
-              {/* Cause Number Badge */}
+            <div key={cause._id} style={{
+              border: '2px solid #e3f2fd',
+              borderRadius: '15px',
+              padding: '25px',
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+              position: 'relative'
+            }}>
               <div style={{
                 position: 'absolute',
                 top: '-10px',
@@ -239,13 +231,26 @@ const CausesPage = () => {
                 borderRadius: '15px',
                 fontSize: '12px',
                 fontWeight: 'bold'
-              }}>
-                #{index + 1}
-              </div>
+              }}>#{index + 1}</div>
+
+              {/* Cover Image */}
+              {cause.image && (
+                <img 
+                  src={`http://localhost:5001/${cause.image}`} 
+                  alt={cause.title} 
+                  style={{
+                    width: '100%',
+                    height: '220px',
+                    objectFit: 'cover',
+                    borderRadius: '12px',
+                    marginBottom: '15px'
+                  }}
+                />
+              )}
 
               {editingCause === cause._id ? (
-                // Edit Mode
                 <div style={{ paddingTop: '10px' }}>
+                  {/* Editing form ... (same as before) */}
                   <h4 style={{ color: '#1a73e8', marginBottom: '15px' }}>✏️ Editing Cause</h4>
                   <input
                     type="text"
@@ -328,18 +333,9 @@ const CausesPage = () => {
                   </div>
                 </div>
               ) : (
-                // View Mode
                 <div style={{ paddingTop: '15px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
-                    <h3 style={{ 
-                      color: '#1a73e8', 
-                      marginBottom: '0', 
-                      fontSize: '24px', 
-                      flex: 1,
-                      lineHeight: '1.2'
-                    }}>
-                      {cause.title}
-                    </h3>
+                    <h3 style={{ color: '#1a73e8', marginBottom: '0', fontSize: '24px', flex: 1, lineHeight: '1.2' }}>{cause.title}</h3>
                     <div style={{ display: 'flex', gap: '8px', marginLeft: '20px' }}>
                       <button
                         onClick={() => handleEdit(cause)}
@@ -373,58 +369,23 @@ const CausesPage = () => {
                       </button>
                     </div>
                   </div>
-                  
-                  <p style={{ 
-                    color: '#555', 
-                    marginBottom: '20px', 
-                    fontSize: '16px', 
-                    lineHeight: '1.6',
-                    backgroundColor: '#f8f9fa',
-                    padding: '15px',
-                    borderRadius: '8px',
-                    border: '1px solid #e9ecef'
-                  }}>
+
+                  <p style={{ color: '#555', marginBottom: '20px', fontSize: '16px', lineHeight: '1.6', backgroundColor: '#f8f9fa', padding: '15px', borderRadius: '8px', border: '1px solid #e9ecef' }}>
                     {cause.description}
                   </p>
-                  
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    marginBottom: '15px',
-                    flexWrap: 'wrap',
-                    gap: '10px'
-                  }}>
-                    <div style={{
-                      backgroundColor: '#e8f5e8',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #28a745'
-                    }}>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ backgroundColor: '#e8f5e8', padding: '8px 12px', borderRadius: '8px', border: '1px solid #28a745' }}>
                       <strong style={{ color: '#28a745' }}>🎯 Target: </strong>
                       <span style={{ fontSize: '18px', fontWeight: 'bold' }}>${cause.targetAmount?.toLocaleString()}</span>
                     </div>
-                    <div style={{
-                      backgroundColor: '#e3f2fd',
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #1a73e8'
-                    }}>
+                    <div style={{ backgroundColor: '#e3f2fd', padding: '8px 12px', borderRadius: '8px', border: '1px solid #1a73e8' }}>
                       <strong style={{ color: '#1a73e8' }}>💰 Raised: </strong>
                       <span style={{ fontSize: '18px', fontWeight: 'bold' }}>${(cause.currentAmount || 0).toLocaleString()}</span>
                     </div>
                   </div>
-                  
-                  {/* Progress bar */}
-                  <div style={{
-                    width: '100%',
-                    backgroundColor: '#e9ecef',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    height: '25px',
-                    marginBottom: '10px',
-                    border: '1px solid #dee2e6',
-                    position: 'relative'
-                  }}>
+
+                  <div style={{ width: '100%', backgroundColor: '#e9ecef', borderRadius: '12px', overflow: 'hidden', height: '25px', marginBottom: '10px', border: '1px solid #dee2e6', position: 'relative' }}>
                     <div style={{
                       width: `${Math.min((cause.currentAmount || 0) / cause.targetAmount * 100, 100)}%`,
                       backgroundColor: '#1a73e8',
@@ -445,36 +406,44 @@ const CausesPage = () => {
                       {Math.round((cause.currentAmount || 0) / cause.targetAmount * 100)}%
                     </div>
                   </div>
-                  
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    gap: '10px'
-                  }}>
-                    <span style={{ 
-                      fontSize: '16px', 
-                      color: '#666', 
-                      fontWeight: 'bold',
-                      backgroundColor: '#f1f3f4',
-                      padding: '5px 10px',
-                      borderRadius: '15px'
-                    }}>
+
+                  {/* Donation Section */}
+                  <div style={{ marginTop: '10px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      type="number"
+                      placeholder="Enter amount"
+                      value={donationAmounts[cause._id] || ''}
+                      onChange={(e) => setDonationAmounts({ ...donationAmounts, [cause._id]: e.target.value })}
+                      min="1"
+                      style={{
+                        padding: '8px 12px',
+                        border: '1px solid #ccc',
+                        borderRadius: '6px',
+                        width: '120px'
+                      }}
+                    />
+                    <button
+                      onClick={() => handleDonate(cause._id)}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#1a73e8',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      💵 Donate
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginTop: '15px' }}>
+                    <span style={{ fontSize: '16px', color: '#666', fontWeight: 'bold', backgroundColor: '#f1f3f4', padding: '5px 10px', borderRadius: '15px' }}>
                       📊 {Math.round((cause.currentAmount || 0) / cause.targetAmount * 100)}% funded
                     </span>
-                    <span style={{ 
-                      fontSize: '13px', 
-                      color: '#888',
-                      backgroundColor: '#f8f9fa',
-                      padding: '4px 8px',
-                      borderRadius: '12px'
-                    }}>
-                      📅 {new Date(cause.createdAt).toLocaleDateString('en-US', { 
-                        year: 'numeric', 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
+                    <span style={{ fontSize: '13px', color: '#888', backgroundColor: '#f8f9fa', padding: '4px 8px', borderRadius: '12px' }}>
+                      📅 {new Date(cause.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
                 </div>

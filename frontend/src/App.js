@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import Tasks from './pages/Tasks';
 import CreateCause from './components/CreateCause';
 import CausesPage from './components/CausesPage'; // Add this import
+import MyCause from './pages/MyCause'; // Import MyCause page
 
 // Simple Home component
 const Home = () => {
@@ -52,6 +53,7 @@ function App() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/create-cause" element={<CreateCause />} />
         <Route path="/causes" element={<CausesPage />} /> {/* ADD THIS LINE */}
+           <Route path="/my-cause" element={<MyCause />}/>
       </Routes>
     </Router>
   );

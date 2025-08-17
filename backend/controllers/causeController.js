@@ -33,27 +33,51 @@ const getCauseById = async (req, res) => {
 // @desc    Create a new cause
 // @route   POST /api/causes
 // @access  Private
+// const createCause = async (req, res) => {
+//   try {
+//     const { title, description, targetAmount, category, imageUrl, endDate } = req.body;
+
+//     const cause = new Cause({
+//       title,
+//       description,
+//       targetAmount,
+//       category,
+//       imageUrl,
+//       endDate,
+//       creator: req.user._id // use logged-in user ID from protect middleware
+//     });
+
+//     const createdCause = await cause.save();
+//     res.status(201).json(createdCause);
+//   } catch (error) {
+//     res.status(400).json({ message: error.message });
+//   }
+// };
 const createCause = async (req, res) => {
   try {
-    const { title, description, targetAmount, category, imageUrl, endDate } = req.body;
+    const { title, description, targetAmount } = req.body;
 
-    const cause = new Cause({
+    if (!title || !description || !targetAmount) {
+      return res.status(400).json({ message: 'Title, description, and target amount are required' });
+    }
+
+    const newCause = new Cause({
       title,
       description,
-      targetAmount,
-      category,
-      imageUrl,
-      endDate,
-      creator: req.user._id // use logged-in user ID from protect middleware
+      targetAmount: Number(targetAmount),
+      currentAmount: 0,
+      image: req.file ? `/uploads/${req.file.filename}` : undefined,
+      creator: req.user._id,
     });
 
-    const createdCause = await cause.save();
-    res.status(201).json(createdCause);
+    await newCause.save();
+    res.status(201).json(newCause);
+
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Create cause error:', error);
+    res.status(500).json({ message: 'Failed to create cause' });
   }
 };
-
 // @desc    Update a cause by ID
 // @route   PUT /api/causes/:id
 // @access  Private
@@ -104,28 +128,39 @@ const deleteCause = async (req, res) => {
 
 // @desc    Donate to a cause
 // @route   POST /api/causes/:id/donate
-// @access  Public
 const donateToCause = async (req, res) => {
   try {
-    const { amount, donorName, donorEmail } = req.body;
-    const cause = await Cause.findById(req.params.id);
+    const { id } = req.params;
+    const { amount } = req.body;
 
-    if (!cause) return res.status(404).json({ message: 'Cause not found' });
+    if (!amount || amount <= 0) {
+      return res.status(400).json({ message: 'Invalid donation amount' });
+    }
 
-    const donation = {
-      amount,
-      donorName: donorName || 'Anonymous',
-      donorEmail,
-      date: Date.now()
-    };
+    const cause = await Cause.findById(id);
+    if (!cause) {
+      return res.status(404).json({ message: 'Cause not found' });
+    }
 
-    cause.donations.push(donation);
     cause.currentAmount = (cause.currentAmount || 0) + amount;
+    await cause.save();
 
-    const updatedCause = await cause.save();
-    res.json({ message: 'Donation successful', cause: updatedCause, donation });
+    return res.status(200).json(cause);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error('Donation error:', error);
+    return res.status(500).json({ message: 'Failed to process donation' });
+  }
+};
+
+
+const getMyCauses = async (req, res) => {
+  try {
+    const userId = req.user._id; // set by auth middleware
+    const myCauses = await Cause.find({ creator: userId }).sort({ createdAt: -1 });
+    res.status(200).json(myCauses);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Failed to fetch your causes' });
   }
 };
 
@@ -135,5 +170,6 @@ module.exports = {
   createCause,
   updateCause,
   deleteCause,
-  donateToCause
+  donateToCause,
+  getMyCauses
 };
